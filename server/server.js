@@ -57,12 +57,28 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true },
 }));
 
-/**
- * Rule 6 — CORS locked to explicit origin.
- * Never wildcard * in production.
- */
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+if (process.env.ALLOWED_ORIGIN) {
+  // Support comma-separated values for multiple production origins
+  const origins = process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim());
+  origins.forEach(o => {
+    if (o && !allowedOrigins.includes(o)) {
+      allowedOrigins.push(o);
+    }
+  });
+}
+
 app.use(cors({
-  origin: ALLOWED_ORIGIN,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST'],
   credentials: true,
 }));
