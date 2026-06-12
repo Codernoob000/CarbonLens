@@ -5,7 +5,7 @@
  */
 
 /** Base URL for the backend API — update for production deployment */
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://carbonlens-pglc.onrender.com/api';
 
 /**
  * Emission factors in kg CO2e per unit.
