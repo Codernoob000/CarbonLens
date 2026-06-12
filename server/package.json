@@ -1,0 +1,25 @@
+{
+  "name": "carbonlens-server",
+  "version": "1.0.0",
+  "description": "CarbonLens backend API — carbon footprint calculation and AI insights proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node ../tests/run_tests.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "2.8.5",
+    "dotenv": "16.4.7",
+    "express": "^4.22.2",
+    "express-rate-limit": "7.5.0",
+    "groq-sdk": "0.9.1",
+    "helmet": "8.0.0",
+    "zod": "3.24.2"
+  },
+  "license": "MIT",
+  "private": true
+}
