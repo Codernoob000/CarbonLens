@@ -73,11 +73,21 @@ if (process.env.ALLOWED_ORIGIN) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (!origin) {
+      return callback(null, true);
     }
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Dynamically allow Vercel preview/deployment URLs for this project
+    const isVercelOrigin = origin.startsWith('https://carbon-lens') && origin.endsWith('.vercel.app');
+    if (isVercelOrigin) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST'],
   credentials: true,
