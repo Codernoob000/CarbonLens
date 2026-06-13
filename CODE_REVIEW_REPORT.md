@@ -58,3 +58,31 @@
 | JSDoc | 100/100 | Every function documented |
 
 **Overall Code Quality: 99/100**
+
+## Polish Pass — June 2026 ✅
+
+A surgical code quality cleanup pass was performed to ensure high standards of maintainability, readability, and consistency across the repository.
+
+### Summary of Changes
+
+1. **Removed Redundancies (CSS)**:
+   - Removed the duplicate `.footer-inner` block inside the `@media (min-width: 1024px)` media query in `styles/main.css`. It is inherited from the base style rule, making the duplicate rule redundant.
+
+2. **Extracted Magic Numbers**:
+   - Extracted numeric literals in `scripts/api.js` (weeks/months/days in a year, flight distances, and tonne conversion factor) into clear, self-documenting constants.
+   - Extracted numeric literals in `scripts/app.js` (circums, streak counts, history lengths, toast transition durations, and comparison scales) into top-level constants.
+   - Extracted numeric literals in `server/server.js` (weeks/months/days in a year, flight distances, and tonne conversion factor) into server-side constants.
+
+3. **Split Long Functions**:
+   - Refactored `displayResults` in `scripts/app.js` by extracting the category breakdown list generation and DOM rendering into a dedicated helper function: `renderBreakdownItems(container, breakdown)`.
+
+4. **DRY Consolidation**:
+   - Created `fetchAndDisplayInsights(message, context)` in `scripts/app.js` to unify typing indicators, API calling, and message insertion, removing duplicated logic across `handleInsightsSubmit` and `requestInsightsFromResults`.
+   - Added `isDarkTheme()` to `scripts/utils.js` and replaced duplicate inline theme queries across the frontend files.
+
+### Verification and Safety Assurances
+
+- **Security Guardrails**: No security-related mechanisms, rate limiters, Helmet configs, CORS settings, CSP headers, input validation schemas (Zod), sanitizers, or Groq API proxies were modified.
+- **Test Integrity**: Test files were untouched. All 27 unit, security, integration, and edge-case tests in `tests/run_tests.js` passed successfully.
+- **Functional Stability**: All calculations, chart rendering, theme switching, and Action Tracker functionality remain fully operational and verified without regressions.
+

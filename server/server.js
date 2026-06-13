@@ -153,6 +153,17 @@ const BENCHMARKS = {
 };
 
 /* ============================================
+   CALCULATION MATH CONSTANTS
+   ============================================ */
+const WEEKS_PER_YEAR = 52;
+const MONTHS_PER_YEAR = 12;
+const DAYS_PER_YEAR = 365;
+const SHORT_HAUL_FLIGHT_KM = 800;
+const LONG_HAUL_FLIGHT_KM = 7000;
+const KG_TO_TONNES = 1000;
+
+
+/* ============================================
    ZOD SCHEMAS (Rule 3 — Input Validation)
    ============================================ */
 
@@ -444,17 +455,17 @@ app.get('/api/benchmarks', apiLimiter, (req, res) => {
  */
 function performCalculation(data) {
   const transport = (
-    data.carKm * EMISSION_FACTORS.CAR_PER_KM * 52 +
-    data.busKm * EMISSION_FACTORS.BUS_PER_KM * 52 +
-    data.trainKm * EMISSION_FACTORS.TRAIN_PER_KM * 52 +
-    data.flightsShort * EMISSION_FACTORS.FLIGHT_DOMESTIC_PER_KM * 800 +
-    data.flightsLong * EMISSION_FACTORS.FLIGHT_INTERNATIONAL_PER_KM * 7000
+    data.carKm * EMISSION_FACTORS.CAR_PER_KM * WEEKS_PER_YEAR +
+    data.busKm * EMISSION_FACTORS.BUS_PER_KM * WEEKS_PER_YEAR +
+    data.trainKm * EMISSION_FACTORS.TRAIN_PER_KM * WEEKS_PER_YEAR +
+    data.flightsShort * EMISSION_FACTORS.FLIGHT_DOMESTIC_PER_KM * SHORT_HAUL_FLIGHT_KM +
+    data.flightsLong * EMISSION_FACTORS.FLIGHT_INTERNATIONAL_PER_KM * LONG_HAUL_FLIGHT_KM
   );
 
   const householdDivisor = Math.max(data.householdSize, 1);
   const energy = (
-    data.electricityKwh * EMISSION_FACTORS.ELECTRICITY_PER_KWH * 12 +
-    data.gasKwh * EMISSION_FACTORS.NATURAL_GAS_PER_KWH * 12
+    data.electricityKwh * EMISSION_FACTORS.ELECTRICITY_PER_KWH * MONTHS_PER_YEAR +
+    data.gasKwh * EMISSION_FACTORS.NATURAL_GAS_PER_KWH * MONTHS_PER_YEAR
   ) / householdDivisor;
 
   const dietFactors = {
@@ -466,16 +477,16 @@ function performCalculation(data) {
   };
   const mealFactor = dietFactors[data.dietType] || EMISSION_FACTORS.MEAL_MEDIUM_MEAT;
   const wasteMult = 1 + data.foodWaste / 100;
-  const food = mealFactor * data.mealsPerDay * 365 * wasteMult;
+  const food = mealFactor * data.mealsPerDay * DAYS_PER_YEAR * wasteMult;
 
   const lifestyle = (
-    data.clothingSpend * EMISSION_FACTORS.SHOPPING_CLOTHING_PER_USD * 12 +
-    data.electronicsSpend * EMISSION_FACTORS.SHOPPING_ELECTRONICS_PER_USD * 12 +
-    data.generalSpend * EMISSION_FACTORS.SHOPPING_GENERAL_PER_USD * 12
+    data.clothingSpend * EMISSION_FACTORS.SHOPPING_CLOTHING_PER_USD * MONTHS_PER_YEAR +
+    data.electronicsSpend * EMISSION_FACTORS.SHOPPING_ELECTRONICS_PER_USD * MONTHS_PER_YEAR +
+    data.generalSpend * EMISSION_FACTORS.SHOPPING_GENERAL_PER_USD * MONTHS_PER_YEAR
   );
 
   const totalKg = transport + energy + food + lifestyle;
-  const totalTonnes = totalKg / 1000;
+  const totalTonnes = totalKg / KG_TO_TONNES;
 
   return {
     totalKg: Math.round(totalKg * 10) / 10,

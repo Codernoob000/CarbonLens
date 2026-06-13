@@ -249,3 +249,12 @@ function calcPercentage(value, total) {
   }
   return clampNumber((value / total) * 100, 0, 100);
 }
+
+/**
+ * Checks if the current active theme is dark.
+ * @returns {boolean} True if dark theme is active.
+ */
+function isDarkTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+

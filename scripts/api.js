@@ -5,6 +5,23 @@
  * Handles loading states, error messages, and rate limit (429) feedback.
  */
 
+/* ============================================
+   CALCULATION CONSTANTS
+   ============================================ */
+/** Weeks per year for transport annualization */
+const WEEKS_PER_YEAR = 52;
+/** Months per year for energy and lifestyle annualization */
+const MONTHS_PER_YEAR = 12;
+/** Days per year for diet emissions annualization */
+const DAYS_PER_YEAR = 365;
+/** Average distance (km) for a short-haul flight */
+const SHORT_HAUL_FLIGHT_KM = 800;
+/** Average distance (km) for a long-haul flight */
+const LONG_HAUL_FLIGHT_KM = 7000;
+/** Kilograms per metric tonne */
+const KG_TO_TONNES = 1000;
+
+
 /**
  * Makes a fetch request to the backend API with error handling.
  * @param {string} endpoint - API endpoint path (e.g., '/calculate').
@@ -155,17 +172,17 @@ function handleRateLimit(retryAfterSeconds) {
  */
 function calculateFootprintOffline(data) {
   const transport = (
-    (data.carKm || 0) * EMISSION_FACTORS.CAR_PER_KM * 52 +
-    (data.busKm || 0) * EMISSION_FACTORS.BUS_PER_KM * 52 +
-    (data.trainKm || 0) * EMISSION_FACTORS.TRAIN_PER_KM * 52 +
-    (data.flightsShort || 0) * EMISSION_FACTORS.FLIGHT_DOMESTIC_PER_KM * 800 +
-    (data.flightsLong || 0) * EMISSION_FACTORS.FLIGHT_INTERNATIONAL_PER_KM * 7000
+    (data.carKm || 0) * EMISSION_FACTORS.CAR_PER_KM * WEEKS_PER_YEAR +
+    (data.busKm || 0) * EMISSION_FACTORS.BUS_PER_KM * WEEKS_PER_YEAR +
+    (data.trainKm || 0) * EMISSION_FACTORS.TRAIN_PER_KM * WEEKS_PER_YEAR +
+    (data.flightsShort || 0) * EMISSION_FACTORS.FLIGHT_DOMESTIC_PER_KM * SHORT_HAUL_FLIGHT_KM +
+    (data.flightsLong || 0) * EMISSION_FACTORS.FLIGHT_INTERNATIONAL_PER_KM * LONG_HAUL_FLIGHT_KM
   );
 
   const householdDivisor = Math.max(data.householdSize || 1, 1);
   const energy = (
-    (data.electricityKwh || 0) * EMISSION_FACTORS.ELECTRICITY_PER_KWH * 12 +
-    (data.gasKwh || 0) * EMISSION_FACTORS.NATURAL_GAS_PER_KWH * 12
+    (data.electricityKwh || 0) * EMISSION_FACTORS.ELECTRICITY_PER_KWH * MONTHS_PER_YEAR +
+    (data.gasKwh || 0) * EMISSION_FACTORS.NATURAL_GAS_PER_KWH * MONTHS_PER_YEAR
   ) / householdDivisor;
 
   const dietFactors = {
@@ -177,16 +194,16 @@ function calculateFootprintOffline(data) {
   };
   const mealFactor = dietFactors[data.dietType] || EMISSION_FACTORS.MEAL_MEDIUM_MEAT;
   const wasteMult = 1 + (data.foodWaste || 0) / 100;
-  const food = mealFactor * (data.mealsPerDay || 3) * 365 * wasteMult;
+  const food = mealFactor * (data.mealsPerDay || 3) * DAYS_PER_YEAR * wasteMult;
 
   const lifestyle = (
-    (data.clothingSpend || 0) * EMISSION_FACTORS.SHOPPING_CLOTHING_PER_USD * 12 +
-    (data.electronicsSpend || 0) * EMISSION_FACTORS.SHOPPING_ELECTRONICS_PER_USD * 12 +
-    (data.generalSpend || 0) * EMISSION_FACTORS.SHOPPING_GENERAL_PER_USD * 12
+    (data.clothingSpend || 0) * EMISSION_FACTORS.SHOPPING_CLOTHING_PER_USD * MONTHS_PER_YEAR +
+    (data.electronicsSpend || 0) * EMISSION_FACTORS.SHOPPING_ELECTRONICS_PER_USD * MONTHS_PER_YEAR +
+    (data.generalSpend || 0) * EMISSION_FACTORS.SHOPPING_GENERAL_PER_USD * MONTHS_PER_YEAR
   );
 
   const totalKg = transport + energy + food + lifestyle;
-  const totalTonnes = totalKg / 1000;
+  const totalTonnes = totalKg / KG_TO_TONNES;
 
   return {
     totalKg: Math.round(totalKg * 10) / 10,

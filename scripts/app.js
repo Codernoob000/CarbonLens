@@ -16,6 +16,31 @@ const STORAGE_KEY_HISTORY = 'footprint_history';
 const STORAGE_KEY_LAST_CALC = 'last_calculation';
 const STORAGE_KEY_BADGES = 'carbonlens_badges';
 
+/** Scale maximum in tonnes CO2 for comparison bar */
+const COMPARISON_MAX_TONNES = 20;
+/** Maximum history months to retain */
+const MAX_HISTORY_MONTHS = 12;
+/** Total circumference of the eco-score SVG circle */
+const ECO_SCORE_CIRCUMFERENCE = 327;
+/** Eco-score threshold for 'excellent' rating */
+const SCORE_EXCELLENT = 80;
+/** Eco-score threshold for 'good' rating */
+const SCORE_GOOD = 60;
+/** Eco-score threshold for 'average' rating */
+const SCORE_AVERAGE = 40;
+/** Duration in ms for toast fade transitions */
+const TOAST_TRANSITION_MS = 300;
+/** Streak count threshold (days) for Week Warrior achievement */
+const BADGE_STREAK_WEEK = 7;
+/** Streak count threshold (days) for Eco Champion achievement */
+const BADGE_STREAK_CHAMPION = 30;
+/** Minimum months of history required for Eco Champion achievement */
+const BADGE_HISTORY_MONTHS = 3;
+/** Minimum household size allowed */
+const MIN_HOUSEHOLD_SIZE = 1;
+/** Maximum household size allowed */
+const MAX_HOUSEHOLD_SIZE = 20;
+
 /* ============================================
    APPLICATION STATE
    ============================================ */
@@ -306,11 +331,11 @@ function gatherFormData() {
     carKm: clampNumber(document.getElementById('car-km')?.value, 0, INPUT_LIMITS.MAX_KM_PER_WEEK),
     busKm: clampNumber(document.getElementById('bus-km')?.value, 0, INPUT_LIMITS.MAX_KM_PER_WEEK),
     trainKm: clampNumber(document.getElementById('train-km')?.value, 0, INPUT_LIMITS.MAX_KM_PER_WEEK),
-    flightsShort: clampNumber(document.getElementById('flights-short')?.value, 0, 200),
-    flightsLong: clampNumber(document.getElementById('flights-long')?.value, 0, 100),
+    flightsShort: clampNumber(document.getElementById('flights-short')?.value, 0, INPUT_LIMITS.MAX_FLIGHTS_SHORT),
+    flightsLong: clampNumber(document.getElementById('flights-long')?.value, 0, INPUT_LIMITS.MAX_FLIGHTS_LONG),
     electricityKwh: clampNumber(document.getElementById('electricity-kwh')?.value, 0, INPUT_LIMITS.MAX_KWH_PER_MONTH),
     gasKwh: clampNumber(document.getElementById('gas-kwh')?.value, 0, INPUT_LIMITS.MAX_KWH_PER_MONTH),
-    householdSize: clampNumber(document.getElementById('household-size')?.value, 1, 20),
+    householdSize: clampNumber(document.getElementById('household-size')?.value, MIN_HOUSEHOLD_SIZE, MAX_HOUSEHOLD_SIZE),
     dietType: document.getElementById('diet-type')?.value || 'medium_meat',
     mealsPerDay: clampNumber(document.getElementById('meals-per-day')?.value, 1, INPUT_LIMITS.MAX_MEALS_PER_DAY),
     foodWaste: clampNumber(document.getElementById('food-waste')?.value, 0, 100),
@@ -353,35 +378,44 @@ function displayResults(results) {
   updateComparisonMarker(results.totalTonnes);
 
   if (breakdownDiv && results.breakdown) {
-    breakdownDiv.textContent = '';
-    const categories = [
-      { key: 'transport', icon: '🚗', label: 'Transport' },
-      { key: 'energy', icon: '⚡', label: 'Energy' },
-      { key: 'food', icon: '🍽️', label: 'Food' },
-      { key: 'lifestyle', icon: '🛍️', label: 'Lifestyle' },
-    ];
-    categories.forEach((cat) => {
-      const item = document.createElement('div');
-      item.className = 'breakdown-item';
-
-      const icon = document.createElement('div');
-      icon.className = 'breakdown-icon';
-      icon.textContent = cat.icon;
-
-      const label = document.createElement('span');
-      label.className = 'breakdown-label';
-      label.textContent = cat.label;
-
-      const value = document.createElement('span');
-      value.className = 'breakdown-value';
-      value.textContent = formatCO2(results.breakdown[cat.key]);
-
-      item.appendChild(icon);
-      item.appendChild(label);
-      item.appendChild(value);
-      breakdownDiv.appendChild(item);
-    });
+    renderBreakdownItems(breakdownDiv, results.breakdown);
   }
+}
+
+/**
+ * Renders individual breakdown items in the results panel.
+ * @param {HTMLElement} container - The container element.
+ * @param {Object} breakdown - Calculation breakdown.
+ */
+function renderBreakdownItems(container, breakdown) {
+  container.textContent = '';
+  const categories = [
+    { key: 'transport', icon: '🚗', label: 'Transport' },
+    { key: 'energy', icon: '⚡', label: 'Energy' },
+    { key: 'food', icon: '🍽️', label: 'Food' },
+    { key: 'lifestyle', icon: '🛍️', label: 'Lifestyle' },
+  ];
+  categories.forEach((cat) => {
+    const item = document.createElement('div');
+    item.className = 'breakdown-item';
+
+    const icon = document.createElement('div');
+    icon.className = 'breakdown-icon';
+    icon.textContent = cat.icon;
+
+    const label = document.createElement('span');
+    label.className = 'breakdown-label';
+    label.textContent = cat.label;
+
+    const value = document.createElement('span');
+    value.className = 'breakdown-value';
+    value.textContent = formatCO2(breakdown[cat.key]);
+
+    item.appendChild(icon);
+    item.appendChild(label);
+    item.appendChild(value);
+    container.appendChild(item);
+  });
 }
 
 /**
@@ -393,7 +427,7 @@ function updateComparisonMarker(tonnes) {
   if (!marker) {
     return;
   }
-  const maxScale = 20;
+  const maxScale = COMPARISON_MAX_TONNES;
   const position = clampNumber((tonnes / maxScale) * 100, 2, 98);
   marker.style.left = `${position}%`;
 }
@@ -452,7 +486,7 @@ function saveToHistory(results) {
     history.push({ month: monthLabel, value: results.totalTonnes });
   }
 
-  if (history.length > 12) {
+  if (history.length > MAX_HISTORY_MONTHS) {
     history.shift();
   }
 
@@ -469,7 +503,7 @@ function saveToHistory(results) {
  * @param {number} tonnes - User's annual footprint in tonnes.
  */
 function updateEcoScore(tonnes) {
-  const maxTonnes = 20;
+  const maxTonnes = COMPARISON_MAX_TONNES;
   const score = Math.round(clampNumber(((maxTonnes - tonnes) / maxTonnes) * 100, 0, 100));
 
   const circle = document.getElementById('eco-score-circle');
@@ -477,7 +511,7 @@ function updateEcoScore(tonnes) {
   const labelEl = document.getElementById('eco-score-label');
 
   if (circle) {
-    const circumference = 327;
+    const circumference = ECO_SCORE_CIRCUMFERENCE;
     const offset = circumference - (score / 100) * circumference;
     circle.setAttribute('stroke-dashoffset', String(offset));
   }
@@ -493,11 +527,11 @@ function updateEcoScore(tonnes) {
       average: 'Average. Room for improvement.',
       high: 'Above average. Consider reducing emissions.',
     };
-    if (score >= 80) {
+    if (score >= SCORE_EXCELLENT) {
       labelEl.textContent = labels.excellent;
-    } else if (score >= 60) {
+    } else if (score >= SCORE_GOOD) {
       labelEl.textContent = labels.good;
-    } else if (score >= 40) {
+    } else if (score >= SCORE_AVERAGE) {
       labelEl.textContent = labels.average;
     } else {
       labelEl.textContent = labels.high;
@@ -541,19 +575,9 @@ async function handleInsightsSubmit(event) {
     submitBtn.disabled = true;
   }
 
-  showTypingIndicator();
-
   try {
     const context = latestResults || {};
-    const response = await getAIInsights(message, context);
-    removeTypingIndicator();
-    addChatMessage(response.reply || response.message || 'No insights available at this time.', 'bot');
-  } catch (error) {
-    removeTypingIndicator();
-    addChatMessage(
-      error.message || 'Unable to get insights right now. Please try again later.',
-      'bot'
-    );
+    await fetchAndDisplayInsights(message, context);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -584,10 +608,18 @@ async function requestInsightsFromResults() {
   const prompt = `My annual carbon footprint is ${latestResults.totalTonnes} tonnes CO₂e. Breakdown: ${summaryParts.join(', ')}. Give me the top 3 most impactful actions I can take to reduce it.`;
 
   addChatMessage(prompt, 'user');
-  showTypingIndicator();
+  await fetchAndDisplayInsights(prompt, latestResults);
+}
 
+/**
+ * Fetches and displays AI insights.
+ * @param {string} message - User query message.
+ * @param {Object} context - Emission data context.
+ */
+async function fetchAndDisplayInsights(message, context) {
+  showTypingIndicator();
   try {
-    const response = await getAIInsights(prompt, latestResults);
+    const response = await getAIInsights(message, context);
     removeTypingIndicator();
     addChatMessage(response.reply || response.message || 'No insights available.', 'bot');
   } catch (error) {
@@ -821,13 +853,13 @@ function updateBadges() {
   if (actionsToday >= 1) {
     badges.firstSteps = true;
   }
-  if (streak.count >= 7) {
+  if (streak.count >= BADGE_STREAK_WEEK) {
     badges.weekWarrior = true;
   }
   if (latestResults && latestResults.totalTonnes < BENCHMARKS.GLOBAL_AVERAGE) {
     badges.carbonCutter = true;
   }
-  if (history.length >= 3 && streak.count >= 30) {
+  if (history.length >= BADGE_HISTORY_MONTHS && streak.count >= BADGE_STREAK_CHAMPION) {
     badges.ecoChampion = true;
   }
 
@@ -881,7 +913,7 @@ function showToast(message, type = 'info', durationMs = 4000) {
       if (toast.parentNode) {
         toast.remove();
       }
-    }, 300);
+    }, TOAST_TRANSITION_MS);
   }, durationMs);
 }
 

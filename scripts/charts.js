@@ -10,6 +10,9 @@
 /** @type {boolean} Whether Google Charts has loaded successfully */
 let chartsReady = false;
 
+/** Debounce timeout (ms) for chart resizing on window resize */
+const RESIZE_DEBOUNCE_MS = 300;
+
 /**
  * Initializes Google Charts library and marks readiness.
  * Falls back gracefully if the library fails to load.
@@ -65,7 +68,7 @@ function renderBreakdownChart(breakdown) {
     ['Lifestyle', breakdown.lifestyle],
   ]);
 
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const isDark = isDarkTheme();
 
   const options = {
     backgroundColor: 'transparent',
@@ -121,7 +124,7 @@ function renderTrendChart(history) {
     ...rows,
   ]);
 
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const isDark = isDarkTheme();
 
   const options = {
     backgroundColor: 'transparent',
@@ -188,7 +191,7 @@ function renderCategoryChart(breakdown) {
     ['Lifestyle', breakdown.lifestyle, '#8b5cf6'],
   ]);
 
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const isDark = isDarkTheme();
 
   const options = {
     backgroundColor: 'transparent',
@@ -300,6 +303,6 @@ function showChartFallbackText(containerId, data) {
  * Sets up responsive chart resizing with debounce.
  */
 function setupChartResize() {
-  const debouncedRedraw = debounce(redrawCharts, 300);
+  const debouncedRedraw = debounce(redrawCharts, RESIZE_DEBOUNCE_MS);
   window.addEventListener('resize', debouncedRedraw);
 }
