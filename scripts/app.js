@@ -222,59 +222,102 @@ function navigateToStep(step) {
 }
 
 /**
- * Updates the calculator UI to reflect the current step.
+ * Shows the active panel and hides all others.
+ * @param {number} step - Current step number.
  */
-function updateStepUI() {
+function updatePanelVisibility(step) {
   const panels = document.querySelectorAll('.calc-panel');
   panels.forEach((panel) => {
     const panelStep = parseInt(panel.getAttribute('data-step'), 10);
-    const isActive = panelStep === currentStep;
+    const isActive = panelStep === step;
     panel.classList.toggle('active', isActive);
     panel.hidden = !isActive;
   });
+}
 
+/**
+ * Updates step button classes and aria-current attributes.
+ * @param {number} step - Current step number.
+ */
+function updateStepButtonStates(step) {
   const stepBtns = document.querySelectorAll('.calc-step');
   stepBtns.forEach((btn) => {
     const btnStep = parseInt(btn.getAttribute('data-step'), 10);
-    btn.classList.toggle('active', btnStep === currentStep);
-    btn.classList.toggle('completed', btnStep < currentStep);
-    btn.setAttribute('aria-current', btnStep === currentStep ? 'step' : 'false');
+    btn.classList.toggle('active', btnStep === step);
+    btn.classList.toggle('completed', btnStep < step);
+    btn.setAttribute('aria-current', btnStep === step ? 'step' : 'false');
   });
+}
 
-  /* Progress bar — fill between step centers only */
+/**
+ * Calculates and sets the progress bar fill width.
+ * @param {number} step - Current step number.
+ * @param {number} totalSteps - Total number of steps.
+ */
+function updateProgressBarWidth(step, totalSteps) {
   const progressBar = document.getElementById('calc-progress-bar');
   if (progressBar) {
     const trackContainer = document.querySelector('.calc-progress');
     if (trackContainer) {
       /* Track spans from left:48px to right:48px inside the container.
          The usable track width = container width - 96px.
-         Step fraction = (currentStep - 1) / (totalSteps - 1) */
+         Step fraction = (step - 1) / (totalSteps - 1) */
       const containerWidth = trackContainer.offsetWidth;
       const trackWidth = containerWidth - 96; /* 48px padding on each side */
-      const fraction = (currentStep - 1) / (TOTAL_STEPS - 1);
+      const fraction = (step - 1) / (totalSteps - 1);
       progressBar.style.width = `${Math.round(fraction * trackWidth)}px`;
     }
   }
 
   const progressRegion = document.querySelector('.calc-progress');
   if (progressRegion) {
-    progressRegion.setAttribute('aria-valuenow', String(currentStep));
+    progressRegion.setAttribute('aria-valuenow', String(step));
   }
+}
 
+/**
+ * Shows or hides the prev/next/submit buttons based on the current step.
+ * @param {number} step - Current step number.
+ * @param {number} totalSteps - Total number of steps.
+ */
+function updateNavigationButtons(step, totalSteps) {
   const prevBtn = document.getElementById('calc-prev');
   const nextBtn = document.getElementById('calc-next');
   const submitBtn = document.getElementById('calc-submit');
 
   if (prevBtn) {
-    prevBtn.disabled = currentStep === 1;
+    prevBtn.disabled = step === 1;
   }
   if (nextBtn) {
-    nextBtn.hidden = currentStep === TOTAL_STEPS;
-    nextBtn.style.display = currentStep === TOTAL_STEPS ? 'none' : '';
+    nextBtn.hidden = step === totalSteps;
+    nextBtn.style.display = step === totalSteps ? 'none' : '';
   }
   if (submitBtn) {
-    submitBtn.hidden = currentStep !== TOTAL_STEPS;
-    submitBtn.style.display = currentStep === TOTAL_STEPS ? '' : 'none';
+    submitBtn.hidden = step !== totalSteps;
+    submitBtn.style.display = step === totalSteps ? '' : 'none';
+  }
+}
+
+/**
+ * Updates the calculator UI to reflect the current step.
+ */
+function updateStepUI() {
+  updatePanelVisibility(currentStep);
+  updateStepButtonStates(currentStep);
+  updateProgressBarWidth(currentStep, TOTAL_STEPS);
+  updateNavigationButtons(currentStep, TOTAL_STEPS);
+}
+
+/**
+ * Attempts online calculation; falls back to offline on failure.
+ * @param {Object} formData - Gathered form input data.
+ * @returns {Promise<Object>} Calculation results.
+ */
+async function calculateWithFallback(formData) {
+  try {
+    return await calculateFootprint(formData);
+  } catch {
+    return calculateFootprintOffline(formData);
   }
 }
 
@@ -294,12 +337,7 @@ async function handleCalculation(event) {
   }
 
   try {
-    let results;
-    try {
-      results = await calculateFootprint(formData);
-    } catch {
-      results = calculateFootprintOffline(formData);
-    }
+    const results = await calculateWithFallback(formData);
 
     latestResults = results;
     storageSet(STORAGE_KEY_LAST_CALC, results);

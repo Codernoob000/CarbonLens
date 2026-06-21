@@ -86,3 +86,22 @@ A surgical code quality cleanup pass was performed to ensure high standards of m
 - **Test Integrity**: Test files were untouched. All 27 unit, security, integration, and edge-case tests in `tests/run_tests.js` passed successfully.
 - **Functional Stability**: All calculations, chart rendering, theme switching, and Action Tracker functionality remain fully operational and verified without regressions.
 
+## Final Fix Pass — June 2026 ✅
+
+A final, ultra-targeted code quality pass addressing 4 specific issues.
+
+### Changes Made
+
+1. **Split `updateStepUI()` into helpers** (`scripts/app.js`): Extracted 4 single-responsibility functions — `updatePanelVisibility()`, `updateStepButtonStates()`, `updateProgressBarWidth()`, and `updateNavigationButtons()`. `updateStepUI()` now delegates to these helpers.
+
+2. **Removed unused `JWT_SECRET`** (`server/server.js`, `server/.env`, `.env.example`): The `JWT_SECRET` variable was declared but never used anywhere in the codebase. Removed the declaration from `server.js` and the corresponding entries from `.env` and `.env.example`.
+
+3. **Immutable CORS origins array** (`server/server.js`): Added `Object.freeze(allowedOrigins)` after the array is fully constructed, preventing accidental runtime mutation.
+
+4. **Flattened nested try-catch** (`scripts/app.js`): Extracted `calculateWithFallback(formData)` to encapsulate the online-then-offline fallback pattern. Replaced the nested `try { try { } catch { } }` in `handleCalculation()` with a single `await calculateWithFallback(formData)` call.
+
+### Verification
+
+- **Tests**: All 27 tests passed (0 failures).
+- **Browser**: Step navigation, progress bar, calculator submission, and results display all verified functional.
+- **Guardrails**: No test files, security middleware, rate limiters, Zod schemas, Helmet config, CORS logic, function signatures, API routes, accessibility attributes, or animation rules were modified.

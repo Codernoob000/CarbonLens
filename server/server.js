@@ -27,7 +27,6 @@ const PORT = parseInt(process.env.PORT, 10) || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const JWT_SECRET = process.env.JWT_SECRET;
 
 const app = express();
 
@@ -70,6 +69,7 @@ if (process.env.ALLOWED_ORIGIN) {
     }
   });
 }
+Object.freeze(allowedOrigins);
 
 app.use(cors({
   origin: (origin, callback) => {
